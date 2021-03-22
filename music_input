@@ -1,5 +1,5 @@
 mode  2 
-echo_level  9 
+echo_level  5 
 Initial_profile  9 
 initialize_with_entropy  0 
 Initial_Distribution_Filename  initial/PbPb_2760GeV_epsilon-u-Hydro-t0.4-0.dat

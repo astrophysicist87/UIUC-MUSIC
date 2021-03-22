@@ -79,7 +79,7 @@ double TransportCoeffs::get_temperature_dependent_eta_over_s_sims(
 
 
 double TransportCoeffs::get_zeta_over_s(double T) const {
-    double zeta_over_s = 0.;;
+    double zeta_over_s = 0.;
     if (DATA.T_dependent_bulk_to_s == 2) {
         zeta_over_s = get_temperature_dependent_zeta_over_s_duke(T);
     } else if (DATA.T_dependent_bulk_to_s == 3) {

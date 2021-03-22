@@ -12,12 +12,15 @@
 #include "cell.h"
 #include "grid.h"
 #include "pretty_ostream.h"
+#include "transport_coeffs.h"
 #include "HydroinfoMUSIC.h"
 
 class Cell_info {
  private:
     const InitData &DATA;
     const EOS &eos;
+    TransportCoeffs transport_coeffs_;
+
     pretty_ostream music_message;
     
     int deltaf_qmu_coeff_table_length_T;
@@ -56,6 +59,9 @@ class Cell_info {
 
     //! This function outputs hydro evolution file in binary format
     void OutputEvolutionDataXYEta_chun(SCGrid &arena, double tau);
+
+	//! This function outputs hydro information needed to evaluate causality conditions
+	void OutputEvolutionDataXYEta_CPlumberg(SCGrid &arena, double tau);
 
     //! This function outputs hydro evolution file in binary format for photon production
     void OutputEvolutionDataXYEta_photon(SCGrid &arena, double tau);
@@ -109,6 +115,10 @@ class Cell_info {
 
     //! This function outputs system's momentum anisotropy as a function of tau
     void output_momentum_anisotropy_vs_tau(
+                double tau, double eta_min, double eta_max, SCGrid &arena);
+
+    //! This function outputs system's momentum anisotropy as a function of x, y, and tau
+    void output_momentum_anisotropy_vs_x_y_tau(
                 double tau, double eta_min, double eta_max, SCGrid &arena);
 };
 

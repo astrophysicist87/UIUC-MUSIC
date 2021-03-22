@@ -115,6 +115,8 @@ int Evolve::EvolveIt(SCGrid &arena_prev, SCGrid &arena_current,
                 grid_info.OutputEvolutionDataXYEta_chun(*ap_current, tau);
             } else if (DATA.outputEvolutionData == 3) {
                 grid_info.OutputEvolutionDataXYEta_photon(*ap_current, tau);
+            } else if (DATA.outputEvolutionData == 4) {
+                grid_info.OutputEvolutionDataXYEta_CPlumberg(*ap_current, tau);
             }
             if (DATA.store_hydro_info_in_memory == 1) {
                 grid_info.OutputEvolutionDataXYEta_memory(*ap_current, tau,
@@ -130,6 +132,8 @@ int Evolve::EvolveIt(SCGrid &arena_prev, SCGrid &arena_current,
         }
 
         grid_info.output_momentum_anisotropy_vs_tau(
+                                            tau, -0.5, 0.5, *ap_current);
+        grid_info.output_momentum_anisotropy_vs_x_y_tau(
                                             tau, -0.5, 0.5, *ap_current);
         if (DATA.Initial_profile == 13) {
             grid_info.output_average_phase_diagram_trajectory(

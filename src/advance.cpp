@@ -186,6 +186,10 @@ void Advance::FirstRKStepW(
                                    mu, nu, w_rhs, theta_local, a_local);
             tempf = ((1. - rk_flag)*(grid_pt_c->Wmunu[idx_1d]*grid_pt_c->u[0])
                      + rk_flag*(grid_pt_prev->Wmunu[idx_1d]*grid_pt_prev->u[0]));
+//if ( mu == 1 && nu == 1 )
+//        std::cout << "pi" << mu << nu << " terms: " << tau_now << "   "
+//                  << -DATA.x_size/2. + ix*DATA.delta_x << "   "
+//                  << -DATA.y_size/2. + iy*DATA.delta_y << "   ";
             temps = diss_helper.Make_uWSource(
                     tau_now, grid_pt_c, grid_pt_prev, mu, nu, rk_flag,
                     theta_local, a_local, sigma_local);
@@ -208,6 +212,10 @@ void Advance::FirstRKStepW(
                                &p_rhs, theta_local);
         tempf = ((1. - rk_flag)*(grid_pt_c->pi_b*grid_pt_c->u[0])
                  + rk_flag*(grid_pt_prev->pi_b*grid_pt_prev->u[0]));
+//if ( rk_flag == 1 )
+//std::cout << "Pi terms: " << tau_now << "   "
+//    << -DATA.x_size/2. + ix*DATA.delta_x << "   "
+//    << -DATA.y_size/2. + iy*DATA.delta_y << "   ";
         temps = diss_helper.Make_uPiSource(
                 tau_now, grid_pt_c, grid_pt_prev, rk_flag,
                 theta_local, sigma_local);
@@ -352,6 +360,10 @@ void Advance::QuestRevert(double tau, Cell_small *grid_pt,
                           << " GeV/fm^3, shear |pi/(epsilon+3*P)| = "
                           << rho_shear;
             music_message.flush("warning");
+std::cout << "Shear regulation: " << tau << "   " << 0 << "   "
+          << -DATA.x_size/2. + ix*DATA.delta_x << "   "
+          << -DATA.y_size/2. + iy*DATA.delta_y << "   "
+          << e_local*hbarc << std::endl;
         }
         for (int mu = 0; mu < 10; mu++) {
             grid_pt->Wmunu[mu] = (rho_shear_max/rho_shear)*grid_pt->Wmunu[mu];
@@ -368,6 +380,10 @@ void Advance::QuestRevert(double tau, Cell_small *grid_pt,
                           << " GeV/fm^3, bulk |Pi/(epsilon+3*P)| = "
                           << rho_bulk;
             music_message.flush("warning");
+std::cout << "Bulk regulation: " << tau << "   "
+          << -DATA.x_size/2. + ix*DATA.delta_x << "   "
+          << -DATA.y_size/2. + iy*DATA.delta_y << "   "
+          << e_local*hbarc << std::endl;
         }
         grid_pt->pi_b = (rho_bulk_max/rho_bulk)*grid_pt->pi_b;
     }

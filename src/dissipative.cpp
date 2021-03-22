@@ -317,6 +317,12 @@ double Diss::Make_uWSource(double tau, Cell_small *grid_pt, Cell_small *grid_pt_
 
         // full term is
         Wsigma_term = -term1_Wsigma - term2_Wsigma;
+
+//std::cout << "*** " << transport_coefficient3 << "   "
+//          << transport_coefficient3*Wsigma << "   "
+//          << -term1_Wsigma << "   "
+//          << -term2_Wsigma << "   *** ";
+
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -377,6 +383,29 @@ double Diss::Make_uWSource(double tau, Cell_small *grid_pt, Cell_small *grid_pt_
     // final answer is
     SW = (NS_term + tempf + Vorticity_term + Wsigma_term + WW_term
           + Coupling_to_Bulk)/(tau_pi);
+
+//if ( mu == 1 && nu == 1 )
+//    std::cout << tempf << "   " << NS_term << "   "
+//              << Wsigma_term << "   " << WW_term << "   "
+//              << Coupling_to_Bulk << "   " << SW*tau_pi << std::endl;
+
+//std::cout << "   pi: "
+//          << Wmunu[0][0] << "   "
+//          << Wmunu[0][1] << "   "
+//          << Wmunu[0][2] << "   "
+//          << Wmunu[1][1] << "   "
+//          << Wmunu[1][2] << "   "
+//          << Wmunu[2][2] << "   "
+//          << Wmunu[3][3] /*<< std::endl*/;
+//std::cout << "   pi(sig): "
+//          << sigma[0][0] << "   "
+//          << sigma[0][1] << "   "
+//          << sigma[0][2] << "   "
+//          << sigma[1][1] << "   "
+//          << sigma[1][2] << "   "
+//          << sigma[2][2] << "   "
+//          << sigma[3][3] << std::endl;
+
     return(SW);
 }
 
@@ -725,7 +754,11 @@ double Diss::Make_uPiSource(double tau, Cell_small *grid_pt, Cell_small *grid_pt
     }
 
     // Final Answer
-    Final_Answer = NS_term + tempf + BB_term + Coupling_to_Shear;
+    Final_Answer = NS_term + tempf + 0.0*BB_term + Coupling_to_Shear;
+
+//if ( rk_flag == 1 )
+//    std::cout << NS_term << "   " << tempf << "   " << 0.0*BB_term << "   " << Coupling_to_Shear
+//		<< "   " << Final_Answer << std::endl;
 
     return Final_Answer/(Bulk_Relax_time);
 }/* Make_uPiSource */

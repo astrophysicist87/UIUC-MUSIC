@@ -6,6 +6,7 @@
 
 #include "./util.h"
 #include "./grid_info.h"
+#include "./transport_coeffs.h"
 
 using Util::hbarc;
 using std::string;
@@ -18,7 +19,8 @@ using std::ostringstream;
 
 Cell_info::Cell_info(const InitData &DATA_in, const EOS &eos_in) :
     DATA(DATA_in),
-    eos(eos_in) {
+    eos(eos_in),
+    transport_coeffs_(eos_in, DATA_in) {
 
     // read in tables for delta f coefficients
     if (DATA.turn_on_diff == 1) {
@@ -223,16 +225,11 @@ void Cell_info::OutputEvolutionDataXYEta(SCGrid &arena, double tau) {
                 if (DATA.outputBinaryEvolution == 0) {
                     fprintf(out_file_xyeta, "%e %e %e %e %e\n",
                             T_local*hbarc, muB_local*hbarc, vx, vy, vz);
-                    if (DATA.viscosity_flag == 1) {
-                        if (DATA.turn_on_shear) {
-                            fprintf(out_file_W_xyeta,
-                                    "%e %e %e %e %e %e %e %e %e %e\n",
-                                    Wtautau, Wtaux, Wtauy, Wtaueta, Wxx, Wxy,
-                                    Wxeta, Wyy, Wyeta, Wetaeta);
-                        }
-                        if (DATA.turn_on_bulk) {
-                            fprintf(out_file_bulkpi_xyeta,"%e %e %e\n", bulk_Pi, enthropy, cs2_local);
-                        }
+                    if ((DATA.viscosity_flag == 1)&&(DATA.turn_on_shear)) {
+                        fprintf(out_file_W_xyeta,
+                                "%e %e %e %e %e %e %e %e %e %e\n",
+                                Wtautau, Wtaux, Wtauy, Wtaueta, Wxx, Wxy,
+                                Wxeta, Wyy, Wyeta, Wetaeta);
                     }
                 } else {
                     float array[] = {static_cast<float>(T_local*hbarc),
@@ -288,6 +285,102 @@ void Cell_info::OutputEvolutionDataXYEta(SCGrid &arena, double tau) {
         fclose(out_file_q_xyeta);
     }
 }
+
+
+
+//! This function outputs hydro evolution file (Christopher Plumberg's version)
+void Cell_info::OutputEvolutionDataXYEta_CPlumberg(SCGrid &arena, double tau) {
+    const string out_name = "evolution_full.dat";
+    string out_open_mode;
+    FILE *out_file        = NULL;
+
+    // If it's the first timestep, overwrite the previous file
+    if (tau == DATA.tau0) {
+        out_open_mode = "w";
+    } else {
+        out_open_mode = "a";
+    }
+    // If we output in binary, set the mode accordingly
+    if (0 == DATA.outputBinaryEvolution) {
+        out_open_mode += "b";
+    }
+    out_file = fopen(out_name.c_str(), out_open_mode.c_str());
+    const int n_skip_x   = DATA.output_evolution_every_N_x;
+    const int n_skip_y   = DATA.output_evolution_every_N_y;
+    const int n_skip_eta = DATA.output_evolution_every_N_eta;
+    for (int ieta = 0; ieta < arena.nEta(); ieta += n_skip_eta) {
+        for (int iy = 0; iy < arena.nY(); iy += n_skip_y) {
+            for (int ix = 0; ix < arena.nX(); ix += n_skip_x) {
+				double x_local     = -DATA.x_size/2. + ix*DATA.delta_x;
+				double y_local     = -DATA.y_size/2. + iy*DATA.delta_y;
+                double e_local     = arena(ix, iy, ieta).epsilon;  // 1/fm^4
+                double rhob_local  = arena(ix, iy, ieta).rhob;     // 1/fm^3
+                double p_local     = eos.get_pressure(e_local, rhob_local);
+                double T_local     = eos.get_temperature(e_local, rhob_local);
+                double cs2_local   = eos.get_cs2(e_local, rhob_local);
+                //double muB_local   = eos.get_muB(e_local, rhob_local);
+                double enthropy    = e_local + p_local;  // [1/fm^4]
+
+                double Wtautau     = arena(ix, iy, ieta).Wmunu[0];
+                double Wtaux       = arena(ix, iy, ieta).Wmunu[1];
+                double Wtauy       = arena(ix, iy, ieta).Wmunu[2];
+                double Wtaueta     = arena(ix, iy, ieta).Wmunu[3];
+                double Wxx         = arena(ix, iy, ieta).Wmunu[4];
+                double Wxy         = arena(ix, iy, ieta).Wmunu[5];
+                double Wxeta       = arena(ix, iy, ieta).Wmunu[6];
+                double Wyy         = arena(ix, iy, ieta).Wmunu[7];
+                double Wyeta       = arena(ix, iy, ieta).Wmunu[8];
+                double Wetaeta     = arena(ix, iy, ieta).Wmunu[9];
+
+                double bulk_Pi_local     = arena(ix, iy, ieta).pi_b; // [1/fm^4]
+
+				double s_density   = enthropy/(T_local + 1e-15);
+				double shear_to_s  = transport_coeffs_.get_eta_over_s(T_local);
+				double bulk_to_s   = transport_coeffs_.get_zeta_over_s(T_local);
+				double shear_local = shear_to_s*s_density;
+				double bulk_local  = bulk_to_s*s_density;
+
+				// first-order transport coefficients
+				double tau_pi_local      = (transport_coeffs_.get_shear_relax_time_factor()
+                                     *shear_local/(enthropy + 1e-15));
+                tau_pi_local             = std::max(3.*DATA.delta_tau, tau_pi_local);
+			    double tau_Pi_local      = (transport_coeffs_.get_bulk_relax_time_factor()
+			                       /((1./3. - cs2_local)*(1./3. - cs2_local))
+			                       /enthropy*bulk_local);
+			    tau_Pi_local             = std::max(3.*DATA.delta_tau, tau_Pi_local);
+
+				// second-order transport coefficients
+				double phi_7_local       = transport_coeffs_.get_phi7_coeff()*tau_pi_local/shear_local*(4./5.);
+				double delta_pipi_local  = transport_coeffs_.get_delta_pipi_coeff()*tau_pi_local;
+				double tau_pipi_local    = transport_coeffs_.get_tau_pipi_coeff()*tau_pi_local;
+				double lambda_piPi_local = transport_coeffs_.get_lambda_piPi_coeff()*tau_pi_local;
+				double delta_PiPi_local  = transport_coeffs_.get_delta_PiPi_coeff()*tau_Pi_local;
+				double lambda_Pipi_local = transport_coeffs_.get_lambda_Pipi_coeff()
+                                     *(1./3. - cs2_local)*tau_Pi_local;
+
+                /*fprintf(out_file, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",
+						tau, x_local, y_local,
+                        T_local, e_local, p_local, cs2_local, shear_local, bulk_local,
+						tau_pi_local, tau_Pi_local,
+						Wtautau, Wtaux, Wtauy, Wtaueta, Wxx, Wxy,
+                        Wxeta, Wyy, Wyeta, Wetaeta,
+						bulk_Pi_local, delta_PiPi_local, lambda_Pipi_local, delta_pipi_local,
+						lambda_piPi_local, phi_7_local, tau_pipi_local, 0.0
+						);*/
+				fprintf(out_file, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",
+						tau, x_local, y_local,
+                        T_local, e_local, p_local, cs2_local, shear_local, bulk_local,
+						tau_pi_local, tau_Pi_local,
+						Wtautau, Wtaux, Wtauy, Wxx, Wxy, Wyy, Wetaeta,
+						bulk_Pi_local, delta_PiPi_local, lambda_Pipi_local, delta_pipi_local,
+						lambda_piPi_local, phi_7_local, tau_pipi_local, 0.0
+						);
+            }
+        }
+    }
+    fclose(out_file);
+}
+
 
 
 void Cell_info::OutputEvolution_Knudsen_Reynoldsnumbers(SCGrid &arena,
@@ -1415,6 +1508,8 @@ void Cell_info::output_momentum_anisotropy_vs_tau(
                 double T_xy_shear   = T_xy_ideal + pi_xy;
                 double T_yy_shear   = T_yy_ideal + pi_yy;
                 double weight_local = e_local;
+		// added by C. Plumberg as check...
+		weight_local = 1.0;
 
                 ideal_num1 += weight_local*(T_xx_ideal - T_yy_ideal);
                 ideal_num2 += weight_local*(2.*T_xy_ideal);
@@ -1474,4 +1569,92 @@ void Cell_info::output_momentum_anisotropy_vs_tau(
     }
     of1 << endl;
     of1.close();
+}
+
+
+//! This function outputs system's momentum anisotropy as a function of x, y, and tau
+void Cell_info::output_momentum_anisotropy_vs_x_y_tau(
+                double tau, double eta_min, double eta_max, SCGrid &arena) {
+    ostringstream filename;
+    filename << "momentum_anisotropy_grid_eta_" << eta_min
+             << "_" << eta_max << ".dat";
+    std::fstream of;
+    if (std::abs(tau - DATA.tau0) < 1e-10) {
+        of.open(filename.str().c_str(), std::fstream::out);
+        of << "# tau(fm)  x(fm)  y(fm)  ecc_{2,c}  ecc_{2,s}  ecc_{2,den}  "
+		   << "epsilon_p(ideal,c)  epsilon_p(ideal,s)  epsilon_p(ideal,den)  "
+		   << "epsilon_p(full,c)  epsilon_p(full,s)  epsilon_p(full,den)"
+           << endl;
+    } else {
+        of.open(filename.str().c_str(), std::fstream::app);
+    }
+    
+    for (int ieta = 0; ieta < arena.nEta(); ieta++) {
+        double eta = 0.0;
+        if (DATA.boost_invariant == 0) {
+            eta = ((static_cast<double>(ieta))*(DATA.delta_eta)
+                    - (DATA.eta_size)/2.0);
+        }
+        if (eta < eta_max && eta > eta_min) {
+            double x_o   = 0.0;
+            double y_o   = 0.0;
+            double w_sum = 0.0;
+            for (int iy = 0; iy < arena.nY(); iy++)
+            for (int ix = 0; ix < arena.nX(); ix++) {
+                double x_local    = - DATA.x_size/2. + ix*DATA.delta_x;
+                double y_local    = - DATA.y_size/2. + iy*DATA.delta_y;
+                double e_local    = arena(ix, iy, ieta).epsilon;  // 1/fm^4
+                double gamma_perp = arena(ix, iy, ieta).u[0];
+                x_o   += x_local*e_local*gamma_perp;
+                y_o   += y_local*e_local*gamma_perp;
+                w_sum += e_local*gamma_perp;
+            }
+            x_o /= w_sum;
+            y_o /= w_sum;
+            for (int iy = 0; iy < arena.nY(); iy++)
+            for (int ix = 0; ix < arena.nX(); ix++) {
+                double x_local   = (- DATA.x_size/2. + ix*DATA.delta_x - x_o);
+                double y_local   = (- DATA.y_size/2. + iy*DATA.delta_y - y_o);
+                double r_local   = sqrt(x_local*x_local + y_local*y_local);
+                double phi_local = atan2(y_local, x_local);
+
+                double e_local      = arena(ix, iy, ieta).epsilon;  // 1/fm^4
+                double rhob_local   = arena(ix, iy, ieta).rhob;     // 1/fm^3
+                double P_local      = eos.get_pressure(e_local, rhob_local);
+                double T_local      = eos.get_temperature(e_local, rhob_local);
+                double gamma_perp   = arena(ix, iy, ieta).u[0];
+                double ux           = arena(ix, iy, ieta).u[1];
+                double uy           = arena(ix, iy, ieta).u[2];
+                double pi_xx        = arena(ix, iy, ieta).Wmunu[4];
+                double pi_xy        = arena(ix, iy, ieta).Wmunu[5];
+                double pi_yy        = arena(ix, iy, ieta).Wmunu[7];
+                double bulk_Pi      = arena(ix, iy, ieta).pi_b;
+
+                double T_xx_ideal   = e_local*ux*ux - P_local*(-1. - ux*ux);
+                double T_xy_ideal   = (e_local + P_local)*ux*uy;
+                double T_yy_ideal   = e_local*uy*uy - P_local*(-1. - uy*uy);
+                double T_xx_full    = T_xx_ideal + pi_xx - bulk_Pi*(-1 - ux*ux);
+                double T_xy_full    = T_xy_ideal + pi_xy + bulk_Pi*ux*uy;
+                double T_yy_full    = T_yy_ideal + pi_yy - bulk_Pi*(-1 - uy*uy);
+                double weight_local = e_local;
+		// added by C. Plumberg
+		weight_local = 1.0;
+
+			    of << scientific << setw(18) << setprecision(8)
+			       << tau << "  " << x_local << "  " << y_local << "  "
+				   << gamma_perp*e_local*r_local*r_local*cos(2.*phi_local) << "  "
+				   << gamma_perp*e_local*r_local*r_local*sin(2.*phi_local) << "  "
+			       << gamma_perp*e_local*r_local*r_local << "  "
+				   << weight_local*(T_xx_ideal - T_yy_ideal) << "  "
+				   << weight_local*(2.*T_xy_ideal) << "  "
+				   << weight_local*(T_xx_ideal + T_yy_ideal) << "  "
+				   << weight_local*(T_xx_full - T_yy_full) << "  "
+				   << weight_local*(2.*T_xy_full) << "  "
+				   << weight_local*(T_xx_full + T_yy_full) << endl;
+            }
+        }
+    }
+
+    of.close();
+	return;    
 }

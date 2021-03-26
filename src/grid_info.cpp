@@ -358,20 +358,19 @@ void Cell_info::OutputEvolutionDataXYEta_CPlumberg(SCGrid &arena, double tau) {
 				double lambda_Pipi_local = transport_coeffs_.get_lambda_Pipi_coeff()
                                      *(1./3. - cs2_local)*tau_Pi_local;
 
-                /*fprintf(out_file, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",
+                /*fprintf(out_file, "%16.10g %16.10g %16.10g %16.10g %16.10g %16.10g % 16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g \n",
 						tau, x_local, y_local,
                         T_local, e_local, p_local, cs2_local, shear_local, bulk_local,
 						tau_pi_local, tau_Pi_local,
-						Wtautau, Wtaux, Wtauy, Wtaueta, Wxx, Wxy,
-                        Wxeta, Wyy, Wyeta, Wetaeta,
+						Wtautau, Wtaux, Wtauy, Wtaueta, Wxx, Wxy, Wxeta, Wyy, Wyeta, Wetaeta,
 						bulk_Pi_local, delta_PiPi_local, lambda_Pipi_local, delta_pipi_local,
 						lambda_piPi_local, phi_7_local, tau_pipi_local, 0.0
 						);*/
-				fprintf(out_file, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g \n",
+				fprintf(out_file, "%16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g %16.10g \n",
 						tau, x_local, y_local,
                         T_local, e_local, p_local, cs2_local, shear_local, bulk_local,
 						tau_pi_local, tau_Pi_local,
-						Wtautau, Wtaux, Wtauy, Wxx, Wxy, Wyy, Wetaeta,
+						Wtautau, Wtaux, Wtauy, Wtaueta, Wxx, Wxy, Wxeta, Wyy, Wyeta, Wetaeta,
 						bulk_Pi_local, delta_PiPi_local, lambda_Pipi_local, delta_pipi_local,
 						lambda_piPi_local, phi_7_local, tau_pipi_local, 0.0
 						);

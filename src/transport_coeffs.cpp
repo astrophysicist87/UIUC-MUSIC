@@ -120,7 +120,29 @@ double TransportCoeffs::get_temperature_dependent_zeta_over_s_sims(
     const double sign=(diff > 0) - (diff < 0);
     const double diff_ratio=(diff)/(width*(lambda*sign+1));
 
-    return max/(1+diff_ratio*diff_ratio);
+//    return max/(1+diff_ratio*diff_ratio);
+/*if ( T_in_GeV >= T_peak_in_GeV )
+{
+    double dTlocal = T_in_GeV/T_peak_in_GeV - 1.0;
+    return 0.24*1.5*1.5/( dTlocal*dTlocal + 1.5*1.5 );
+}
+else
+{
+    double dTlocal = (T_in_GeV-T_peak_in_GeV)/0.05;
+    return 0.24*exp(-dTlocal*dTlocal);
+}*/
+
+if ( T_in_GeV < 0.16 )
+{
+    double dTlocal = (T_in_GeV-0.16)/0.01;
+    return max*exp(-dTlocal*dTlocal);
+}
+else
+{
+    double dTlocal = (T_in_GeV-0.16)/0.12;
+    return max*exp(-dTlocal*dTlocal);
+}
+
 }
 
 
